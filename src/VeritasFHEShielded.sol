@@ -23,7 +23,7 @@ contract VeritasFHEShielded is ZamaEthereumConfig {
     mapping(uint256 => bool) public usedNullifiers;
     mapping(uint256 => mapping(address => euint64)) internal shieldedBets;
     mapping(uint256 => mapping(address => ebool)) internal shieldedSides;
-    mapping(uint256 => mapping(address => bool)) public hasBet;
+    mapping(uint256 => mapping(address => ebool)) internal shieldedHasBet;
     uint256 public marketCount;
     // ─── STORAGE PADDING ──────────────────────────────
     // Anti side-channel: cada bet real emite ruido en todos los mercados
@@ -101,7 +101,6 @@ contract VeritasFHEShielded is ZamaEthereumConfig {
         // 3. Verificar mercado abierto
         Market storage m = markets[marketId];
         require(m.endTime > 0 && block.timestamp < m.endTime, "Mercado cerrado");
-        require(!hasBet[marketId][msg.sender], "Ya apostaste");
 
         // 4. Procesar apuesta encriptada
         euint64 amount = FHE.fromExternal(amountEnc, inputProof);
@@ -113,7 +112,9 @@ contract VeritasFHEShielded is ZamaEthereumConfig {
 
         shieldedBets[marketId][msg.sender] = amount;
         shieldedSides[marketId][msg.sender] = side;
-        hasBet[marketId][msg.sender] = true;
+        shieldedHasBet[marketId][msg.sender] = FHE.asEbool(true);
+        FHE.allowThis(shieldedHasBet[marketId][msg.sender]);
+        FHE.allow(shieldedHasBet[marketId][msg.sender], msg.sender);
         _emitStoragePadding();
 
         FHE.allowThis(m.totalYes);
