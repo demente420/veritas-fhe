@@ -8,3 +8,4 @@ circuits/*.wasm
 circuits/withdraw_js/
 circuits/*.r1cs
 circuits/*.sym
+circuits/*.json
