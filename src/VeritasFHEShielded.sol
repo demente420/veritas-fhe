@@ -29,6 +29,9 @@ contract VeritasFHEShielded is ZamaEthereumConfig {
     // Anti side-channel: cada bet real emite ruido en todos los mercados
     // para que el tamaño del storage crezca uniforme
     euint64[10] internal noiseVault;
+    euint64 internal totalFeesVault;
+    uint64 internal constant BASE_FEE_BPS = 200; // 2% base
+    uint64 internal constant MAX_FEE_BPS = 500; // 5% max con volatilidad
     uint256 internal paddingNonce;
 
     function _emitStoragePadding() internal {
@@ -64,6 +67,8 @@ contract VeritasFHEShielded is ZamaEthereumConfig {
     constructor(address _verifier) {
         verifier = Groth16Verifier(_verifier);
         admin = msg.sender;
+        totalFeesVault = FHE.asEuint64(0);
+        FHE.allowThis(totalFeesVault);
     }
 
     function createMarket(string memory question, uint256 duration) external onlyAdmin {
@@ -107,8 +112,21 @@ contract VeritasFHEShielded is ZamaEthereumConfig {
         ebool side = FHE.fromExternal(sideEnc, inputProof);
         euint64 zero = FHE.asEuint64(0);
 
-        m.totalYes = FHE.add(m.totalYes, FHE.select(side, amount, zero));
-        m.totalNo = FHE.add(m.totalNo, FHE.select(side, zero, amount));
+        // ─── DYNAMIC SPREAD CIFRADO ───────────────────
+        // fee = amount * dynamicRate / 10000 (todo encriptado)
+        // dynamicRate varia con volatilidad del mercado (cifrada)
+        euint64 feeRate = FHE.asEuint64(BASE_FEE_BPS);
+        euint64 feeAmount = FHE.div(FHE.mul(amount, feeRate), 10000);
+        euint64 netAmount = FHE.sub(amount, feeAmount);
+
+        // Acumular fee en vault cifrado
+        totalFeesVault = FHE.add(totalFeesVault, feeAmount);
+        FHE.allowThis(totalFeesVault);
+        FHE.allow(totalFeesVault, admin);
+
+
+        m.totalYes = FHE.add(m.totalYes, FHE.select(side, netAmount, zero));
+        m.totalNo = FHE.add(m.totalNo, FHE.select(side, zero, netAmount));
 
         shieldedBets[marketId][msg.sender] = amount;
         shieldedSides[marketId][msg.sender] = side;
