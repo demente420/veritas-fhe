@@ -1,0 +1,8 @@
+{
+  "lib/fhevm": {
+    "tag": {
+      "name": "v0.12.1",
+      "rev": "083312c99e18347a077ea574f2cbded70aca781e"
+    }
+  }
+}
