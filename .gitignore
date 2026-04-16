@@ -1,0 +1,10 @@
+node_modules/
+out/
+cache/
+broadcast/*/*/dry-run/
+circuits/*.ptau
+circuits/*.zkey
+circuits/*.wasm
+circuits/withdraw_js/
+circuits/*.r1cs
+circuits/*.sym
